@@ -1,4 +1,4 @@
-
+//元素类型
 $.validater.type.default = {
     "onInit": function (element) {
 
@@ -47,6 +47,7 @@ $.validater.type.bootStrap4Input = {
     }
 }
 
+// 检验规则
 $.validater.type.bootStrap4Selectpicker = {
     "onInit": function (element) {
         $(element).on("changed.bs.select", function (e, clickedIndex, isSelected, previousValue) {
