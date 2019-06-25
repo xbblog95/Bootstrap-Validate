@@ -29,7 +29,7 @@ jquery-validate 是一款高度定制化检验插件，与一般对于表单的�
                                                   }' data-validate-type="bootStrap4Input"  required/>
 ```
 即可完成元素的初始化，无需编写js文件。
-
+注意，demo中需要引入BootStrap4.
 #### options
 
 | 选项 | 名词解释  |  备注格式 |
@@ -38,6 +38,7 @@ jquery-validate 是一款高度定制化检验插件，与一般对于表单的�
 |data-validate-message|检验失败时的错误提示|json字符串，中key是插件内置定义的检验规则名称，名称可以参考validate-config.js中检验规则项，value为该项检验失败时的提示|
 |data-validate-type|元素类型|参考validate-config.js中的元素类型项，表示该元素使用检验配置中相应元素类型的配置|
 
+![图片](https://s2.ax1x.com/2019/06/25/ZZey0P.png)
 #### 更新检验规则
 调用元素上的updateRule方法，传入相关参数
 ```javascript
