@@ -3,10 +3,10 @@
 
     function validaterObj()
     {
-        var eleObjs ={};
+        var eleObjs = new Map();
 
         function getObj(element) {
-            return eleObjs[element];
+            return eleObjs.get(element);
         }
         //获取规则
         function getRules(element) {
@@ -19,7 +19,7 @@
         }
         //获取错误信息
         function getErrorMessages(element) {
-            var obj =   getObj(element);
+            var obj = getObj(element);
             if(obj)
             {
                 return obj.errorMessages;
@@ -33,7 +33,7 @@
             {
                 return obj.type;
             }
-            return null;
+            return "default";
         }
 
         /**
@@ -63,8 +63,7 @@
             if(valiObj)
             {
                 //存在则更新
-                valiObj.type = ruleObj.type;
-                //判断是否存在这个检验规则
+                valiObj.type = ruleObj.type ? ruleObj.type : valiObj.type;
                 var rules = getRules(element);
                 var errorMessages = getErrorMessages(element);
                 for(var i in ruleObj.rules)
@@ -81,7 +80,9 @@
                     rules : ruleObj.rules,
                     errorMessages: ruleObj.errorMessages
                 }
-                eleObjs[element]=obj;
+                eleObjs.set(element, obj);
+                //调用元素的inInit方法，执行自定义初始化操作，比如值改变时检验等等。
+                callElementInit(element);
             }
         }
 
@@ -103,15 +104,22 @@
                 var errorMessages = getErrorMessages(element);
                 delete rules[rule];
                 delete errorMessages[rule];
-                //如果删除之后，插件无检验规则，需要把插件从检验池中移除
-                if(getRules(element).length == 0)
-                {
-                    delete eleObjs[element];
-                }
             }
             //没有插件不管
         }
 
+        /**
+         * 通知设置元素初始化自定义方法
+         * @param element
+         */
+        function callElementInit(element) {
+            var type = getType(element);
+            //如果配置该元素的预设置参数，则使用，否则使用default参数
+            if($.validater.type[type])
+            {
+                $.validater.type[type].onInit(element);
+            }
+        }
         /**
          * 通知设置元素错误样式
          * @param element
@@ -188,7 +196,7 @@
         function validate(element) {
             var rules = getRules(element);
             //没有规则的话，直接返回true
-            if(!rules)
+            if($.isEmptyObject(rules))
             {
                 return true;
             }
@@ -245,28 +253,46 @@
                 return true;
             }
             //先检验自己
+            var isSuccess = true;
             if(!validate(jq[0]))
             {
-                return false;
+               isSuccess = false;
             }
-            var isSuccess = true;
             jq.find(".validater").each(function () {
                 var result = validate($(this)[0]);
                 if(!result)
                 {
                     isSuccess = false;
-                    return false;
                 }
             })
             return isSuccess;
         }
         //添加/替换规则与错误信息
-        this.updateRule = function (element, ruleObj) {
-            updateRule(element, ruleObj);
+        this.updateRule = function (ruleObj, jq) {
+            if(!jq)
+            {
+                jq = $(this);
+            }
+            if(jq instanceof jQuery)
+            {
+                updateRule(jq.get(0), ruleObj);
+            }
+            else
+            {
+                updateRule(jq, ruleObj);
+            }
+
         }
         //删除规则与错误信息
-        this.deleteRule = function (element, rule) {
-            deleteRule(element, rule)
+        this.deleteRule = function (jq, rule) {
+            if(jq instanceof jQuery)
+            {
+                deleteRule(jq.get(0), rule);
+            }
+            else
+            {
+                deleteRule(jq, rule);
+            }
         }
         //检验元素
         this.validate = function(element)
@@ -285,28 +311,12 @@
             {
                 for(var i in element)
                 {
-                    //是否jquery元素
-                    if(element[i] instanceof jQuery)
-                    {
-                        result.push(validateJquery(element[i]));
-                    }
-                    else
-                    {
-                        result.push(validate(element[i]));
-                    }
+                    result.push(validateJquery($(element[i])));
                 }
             }
             else
             {
-                //是否jquery元素
-                if(element instanceof jQuery)
-                {
-                    result.push(validateJquery(element));
-                }
-                else
-                {
-                    result.push(validate(element));
-                }
+                result.push(validateJquery($(element)));
             }
             if(result.length == 1)
             {
@@ -315,22 +325,26 @@
             return result;
         }
         //重置元素
-        this.reset = function (element) {
-            if(!element)
+        this.reset = function (jq) {
+            if(!jq)
             {
                 if(!this)
                 {
                     return;
                 }
-                callElementReset($(this));
+                callElementReset($(this).get(0));
             }
             else
             {
-                callElementReset(element);
+                callElementReset(jq.get(0));
             }
         }
+        //获取元素的类型
+        this.getType = function (element) {
+            return getType(element);
+        }
     }
-
+    var validater = new validaterObj();
     //检验的相关参数
     $.extend({
         validater : {
@@ -348,10 +362,11 @@
         }
     });
 
-    var validater = new validaterObj();
+
     //dom调用检验插件其中方法
     $.fn[pluginName] = function(opt, ...param)
     {
+        var result = [];
         this.each(function () {
             if(opt && typeof(opt) === "string")
             {
@@ -359,18 +374,24 @@
                 {
                     console.log("找不到" + opt + "方法");
                 }
-                validater[opt](this, param);
+                result.push(validater[opt].apply($(this), param));
             }
             else
             {
+                //初始化
                 var _options = {
                     type : $(this).attr("data-validate-type") ? $(this).attr("data-validate-type") : "default",
                     errorMessages :   JSON.parse($(this).attr("data-validate-message") ? $(this).attr("data-validate-message") : "{}"),
                     rules : JSON.parse($(this).attr("data-validate-rule") ? $(this).attr("data-validate-rule") : "{}")
                 };
-                validater.updateRule(this, _options);
+                validater.updateRule(_options, $(this));
             }
         })
+        if(result.length == 1)
+        {
+            return result[0];
+        }
+        return result;
     };
 
     //通过validate中的方法对某个dom执行某项操作
@@ -386,6 +407,9 @@
         },
         reset : function (element) {
             validater.reset(element);
+        },
+        getType : function (element) {
+            return validater.getType(element);
         }
     };
 

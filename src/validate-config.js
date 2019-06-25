@@ -1,18 +1,80 @@
+
 $.validater.type.default = {
+    "onInit": function (element) {
+
+    },
     "onError":function (error, element) {
-        console.log(element);
-        alert(error);
+
     },
     "onReset" : function (element) {
-        console.log(element);
-        alert("reset")
+
     },
     "onSuccess" : function (element) {
-        console.log(element);
-        alert("success")
+
     },
     "onGetValue" : function (element) {
         return $(element).val();
+    }
+}
+
+
+$.validater.type.bootStrap4Input = {
+    "onInit": function (element) {
+        $(element).on("keyup", function () {
+            $(element).jqueryValidate("validate");
+        })
+    },
+    "onError":function (error, element) {
+        $(element).tooltip("dispose");
+        $(element).tooltip({
+            title : error,
+            placement : 'bottom'
+        })
+        $(element).addClass("is-invalid");
+    },
+    "onReset" : function (element) {
+        $(element).tooltip("dispose");
+        $(element).removeClass("is-invalid");
+        $(element).removeClass("error");
+    },
+    "onSuccess" : function (element) {
+        $(element).tooltip("dispose");
+        $(element).removeClass("is-invalid");
+        $(element).removeClass("error");
+    },
+    "onGetValue" : function (element) {
+        return $(element).val();
+    }
+}
+
+$.validater.type.bootStrap4Selectpicker = {
+    "onInit": function (element) {
+        $(element).on("changed.bs.select", function (e, clickedIndex, isSelected, previousValue) {
+            if(isSelected)
+            {
+                //只有用户自己选择的，才会触发检验
+                $(element).jqueryValidate("validate");
+            }
+        })
+    },
+    "onError":function (error, element) {
+        $(element).parent().css("border", "1px solid #dc3545");
+        $(element).parent().tooltip("dispose");
+        $(element).parent().tooltip({
+            title : error,
+            placement : 'bottom'
+        })
+    },
+    "onReset" : function (element) {
+        $(element).parent().css("border", "");
+        $(element).parent().tooltip("dispose");
+    },
+    "onSuccess" : function (element) {
+        $(element).parent().css("border", "");
+        $(element).parent().tooltip("dispose");
+    },
+    "onGetValue" : function (element) {
+        return $(element).selectpicker("val");
     }
 }
 
@@ -128,20 +190,20 @@ $.validater.validatefunction.number  = function (value, options) {
     return true;
 }
 
-$.validater.validatefunction.equalTo  = function (value, options) {
+$.validater.validatefunction.equalTo  = function (value, element) {
     //设置的是true，检验是否与指定项相等，其中需要排除必填检验，那是必填检验项的事
     if(value != undefined && value != "")
     {
-       return value === $.validater.type[options.type].onGetValue($(options.element)[0]);
+       return value === $.validater.type[$.jqueryValidate.getType($(element).get(0))].onGetValue($(element));
     }
     return true;
 }
 
-$.validater.validatefunction.notEqualTo  = function (value, options) {
+$.validater.validatefunction.notEqualTo  = function (value, element) {
     //设置的是true，检验是否与指定项相等，其中需要排除必填检验，那是必填检验项的事
     if(value != undefined && value != "")
     {
-        return value != $.validater.type[options.type].onGetValue($(options.element)[0]);
+        return value != $.validater.type[$.jqueryValidate.getType($(element).get(0))].onGetValue($(element));
     }
     return true;
 }
